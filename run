@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess as sp
+import os
+
+IMAGE_NAME = "webots_docker"
+
+def run_dev_environment(command):
+    docker_args = []
+    docker_user = "webots"
+    dockerfile  = 'webots_docker'
+
+    uid = os.getuid()
+
+    # 'webots_docker' and 'ws' are at the same level
+    ws_mount = os.path.abspath("{}/../ws".format(
+        sp.check_output('git rev-parse --show-toplevel'.split()).strip().decode()))
+
+    # Workspace name
+    ws_name = "catkin_ws"
+
+    docker_args.append("-it")
+    docker_args.append("--rm")
+    docker_args.append("--env=DISPLAY")
+    docker_args.append("--volume=/tmp/.X11-unix:/tmp/.X11-unix:rw")
+    docker_args.append("--volume=$HOME/.Xauthority:/root/.Xauthority:rw")
+    docker_args.append("--name=\"{}\"".format(IMAGE_NAME))
+    docker_args.append("--privileged")
+    docker_args.append("--network=host")
+    docker_args.append("--cap-add=IPC_LOCK")
+    docker_args.append("--cap-add=sys_nice")
+    docker_args.append("--user {0}:{0}".format(uid))
+    # VSCode needs HOME to be defined in order to work in the container
+    docker_args.append("-e HOME=/home/{}".format(docker_user))
+    # Mount workspace
+    docker_args.append("--volume {}:/{}".format(ws_mount, ws_name))
+    # Use NVIDIA
+    docker_args.append("--gpus=all")
+    # Sound for Webots
+    docker_args.append("--device /dev/snd")
+    docker_args.append("--group-add audio")
+    # Add sudo group
+    docker_args.append("--group-add sudo")
+
+    docker_args.append("-e ROS_HOSTNAME=localhost")
+    docker_args.append("-e ROS_MASTER_URI=http://localhost:11311")
+    docker_args.append("--workdir /{}/".format(ws_name))
+
+    # Join arguments together separated by a space
+    docker_args = ' '.join(docker_args)
+    docker_command = "docker run {} {} {}".format(docker_args, dockerfile, command)
+
+    sp.call("xhost +local:docker", shell=True)
+    sp.call(docker_command, shell=True)
+    sp.call("xhost -local:docker", shell=True)
+
+def attach_dev_environment(command):
+    command = 'docker exec -it --user {0}:{0} {1} {2}'.format(os.getuid(), IMAGE_NAME, command)
+    sp.call(command, shell=True)
+
+def is_running():
+    command = 'docker ps | grep {} > /dev/null'.format(IMAGE_NAME)
+    try:
+        sp.check_call(command, shell=True)
+    except Exception:
+        return False
+
+    return True
+
+def main():
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--cmd', dest='command', default='bash')
+    args = parser.parse_args()
+
+    if not is_running():
+        run_dev_environment(args.command)
+    else:
+        attach_dev_environment(args.command)
+
+if __name__ == '__main__':
+    main()
