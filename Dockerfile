@@ -86,11 +86,45 @@ RUN echo "[[ -f ${CATKIN_SETUP_BASH} ]] && . ${CATKIN_SETUP_BASH}" >> /home/${US
 
 USER root
 
+# Install dependencies from source
+# http://wiki.ros.org/catkin/Tutorials/using_a_workspace#Installing_Packages
+ENV DEPS_WS=/deps_ws
+RUN mkdir -p ${DEPS_WS}/src
+WORKDIR ${DEPS_WS}/src
+RUN git clone https://github.com/eborghi10/moveit_grasps.git
+RUN wstool init .
+RUN wstool merge moveit_grasps/moveit_grasps.rosinstall
+RUN wstool update
+WORKDIR ${DEPS_WS}
+USER ${USER}
+RUN rosdep install --from-paths src --rosdistro=melodic -yi -r --os=ubuntu:bionic
+USER root
+RUN /bin/bash -c ". /opt/ros/melodic/setup.bash; \
+        catkin_make -DCMAKE_INSTALL_PREFIX=/opt/ros/melodic; \
+        cd build; make install"
+RUN rm -r ${DEPS_WS}
+
 # ROS extra packages
 RUN apt-get update && apt-get install -y \
   ros-melodic-moveit \
+  ros-melodic-position-controllers \
+  ros-melodic-rgbd-launch \
   ros-melodic-webots-ros \
-  ros-melodic-rgbd-launch
+  # robotiq
+  python-pymodbus \
+  qtbase5-dev \
+  ros-melodic-controller-manager \
+  ros-melodic-effort-controllers \
+  ros-melodic-gazebo-msgs \
+  ros-melodic-gazebo-plugins \
+  ros-melodic-gazebo-ros \
+  ros-melodic-gazebo-ros-control \
+  ros-melodic-hardware-interface \
+  ros-melodic-joint-state-controller \
+  ros-melodic-joint-trajectory-controller \
+  ros-melodic-pcl-ros \
+  ros-melodic-socketcan-interface \
+  ros-melodic-soem
 
 # Installing OpenGL for nvidia-docker2
 # https://stackoverflow.com/a/53823600
