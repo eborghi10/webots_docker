@@ -107,6 +107,7 @@ RUN rm -r ${DEPS_WS}
 # ROS extra packages
 RUN apt-get update && apt-get install -y \
   ros-melodic-moveit \
+  ros-melodic-moveit-resources \
   ros-melodic-position-controllers \
   ros-melodic-rgbd-launch \
   ros-melodic-webots-ros \
