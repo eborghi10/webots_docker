@@ -14,8 +14,8 @@ def run_dev_environment(command):
     uid = os.getuid()
 
     # 'webots_docker' and 'ws' are at the same level
-    ws_mount = os.path.abspath("{}/../ws".format(
-        sp.check_output('git rev-parse --show-toplevel'.split()).strip().decode()))
+    repo_dir = sp.check_output('git rev-parse --show-toplevel'.split()).strip().decode()
+    ws_mount = os.path.abspath("{}/../ws".format(repo_dir))
 
     # Workspace name
     ws_name = "catkin_ws"

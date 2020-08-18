@@ -137,5 +137,9 @@ ENV NVIDIA_DRIVER_CAPABILITIES=all
 
 COPY 10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
 
+RUN mkdir -p /home/${USER}/.config/Cyberbotics
+COPY --chown=${USER}:${USER} Webots-R2020b.conf /home/${USER}/.config/Cyberbotics/Webots-R2020b.conf
+RUN chown -R ${USER}:${USER} /home/${USER}/.config/Cyberbotics
+
 USER ${USER}
 CMD /bin/bash
