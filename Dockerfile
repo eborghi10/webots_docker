@@ -91,7 +91,7 @@ USER root
 ENV DEPS_WS=/deps_ws
 RUN mkdir -p ${DEPS_WS}/src
 WORKDIR ${DEPS_WS}/src
-RUN git clone https://github.com/eborghi10/moveit_grasps.git
+RUN git clone https://github.com/eborghi10/moveit_grasps.git -b melodic-devel
 RUN wstool init .
 RUN wstool merge moveit_grasps/moveit_grasps.rosinstall
 RUN wstool update
@@ -100,7 +100,7 @@ USER ${USER}
 RUN rosdep install --from-paths src --rosdistro=melodic -yi -r --os=ubuntu:bionic
 USER root
 RUN /bin/bash -c ". /opt/ros/melodic/setup.bash; \
-        catkin_make -DCMAKE_INSTALL_PREFIX=/opt/ros/melodic; \
+        catkin_make -DCMAKE_INSTALL_PREFIX=/opt/ros/melodic -DCMAKE_BUILD_TYPE=Release; \
         cd build; make install"
 RUN rm -r ${DEPS_WS}
 
