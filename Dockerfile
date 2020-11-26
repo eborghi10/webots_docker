@@ -132,6 +132,7 @@ RUN apt-get update && apt-get install -y \
   ros-melodic-joint-state-controller \
   ros-melodic-joint-trajectory-controller \
   ros-melodic-pcl-ros \
+  ros-melodic-tf2-sensor-msgs \
   ros-melodic-socketcan-interface \
   ros-melodic-soem
 
@@ -191,7 +192,7 @@ RUN cd /opt \
 
 # Install GPD
 RUN cd /opt \
-    && git clone https://github.com/atenpas/gpd gpd \
+    && git clone https://github.com/eborghi10/gpd gpd \
     && cd gpd \
     && mkdir build \
     && cd build \
@@ -216,6 +217,10 @@ RUN /bin/bash -c ". /opt/ros/melodic/setup.bash; \
         catkin_make -DCMAKE_INSTALL_PREFIX=/opt/ros/melodic -DCMAKE_BUILD_TYPE=Release; \
         cd build; make install"
 RUN rm -r ${GRASP_WS}
+
+######################################################
+
+COPY params/* /GPD/gpd/models/lenet/15channels/params/
 
 ######################################################
 
