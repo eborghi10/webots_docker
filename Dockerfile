@@ -1,5 +1,9 @@
-FROM nvidia/opengl:1.0-glvnd-runtime-ubuntu16.04 as nvidia
-FROM ubuntu:18.04
+ARG UBUNTU_VERSION=18.04
+# https://hub.docker.com/r/nvidia/cudagl
+ARG ARCH=gl
+ARG CUDA=10.2
+FROM nvidia/cuda${ARCH}:${CUDA}-base-ubuntu${UBUNTU_VERSION} as base
+
 LABEL maintainer="Emiliano Borghi"
 
 ARG uid
@@ -21,11 +25,15 @@ RUN apt-get update && \
         bash-completion \
         build-essential \
         ca-certificates \
+        cmake \
+        git \
         gnupg2 \
+        libxt-dev \
         mesa-utils \
         software-properties-common \
         sudo \
         tmux \
+        unzip \
         wget
 
 # Create a user with passwordless sudo
@@ -127,15 +135,89 @@ RUN apt-get update && apt-get install -y \
   ros-melodic-socketcan-interface \
   ros-melodic-soem
 
-# Installing OpenGL for nvidia-docker2
-# https://stackoverflow.com/a/53823600
-COPY --from=nvidia /usr/local /usr/local
-COPY --from=nvidia /etc/ld.so.conf.d/glvnd.conf /etc/ld.so.conf.d/glvnd.conf
+######################################################
 
-ENV NVIDIA_VISIBLE_DEVICES=all
-ENV NVIDIA_DRIVER_CAPABILITIES=all
+# # Install Eigen
+# RUN cd /opt \
+#     && git clone https://github.com/eigenteam/eigen-git-mirror eigen \
+#     && cd eigen \
+#     && git checkout tags/3.2.0 \
+#     && mkdir build \
+#     && cd build \
+#     && cmake .. \
+#     && make -j$(nproc) \
+#     && make install
 
-COPY 10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+# # Install VTK
+# RUN cd /opt \
+#     && git clone https://github.com/Kitware/VTK VTK \
+#     && cd VTK \
+#     && git checkout tags/v8.0.0 \
+#     && mkdir build \
+#     && cd build \
+#     && cmake -DCMAKE_BUILD_TYPE:STRING=Release -D VTK_RENDERING_BACKEND=OpenGL .. \
+#     && make -j$(nproc) \
+#     && make install
+
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+    libboost-all-dev \
+    libflann-dev
+
+# Install PCL
+RUN cd /opt \
+    && wget https://github.com/PointCloudLibrary/pcl/archive/pcl-1.11.0.zip \
+    && unzip pcl-1.11.0.zip \
+    && cd pcl-pcl-1.11.0 \
+    && mkdir build \
+    && cd build \
+    && cmake -D CMAKE_BUILD_TYPE=Release -D BUILD_GPU=ON .. \
+    && make -j$(nproc) \
+    && make install
+
+# Install Opencv
+RUN cd /opt \
+    && wget https://github.com/opencv/opencv/archive/3.4.3.zip \
+    && unzip 3.4.3.zip \
+    && cd opencv-3.4.3 \
+    && mkdir build \
+    && cd build \
+    && cmake -D WITH_OPENMP=ON \
+             -D ENABLE_PRECOMPILED_HEADERS=OFF \
+             -D WITH_CUDA=ON \
+             -D WITH_OPENGL=ON \..\
+    && make -j$(nproc) \
+    && make install
+
+# Install GPD
+RUN cd /opt \
+    && git clone https://github.com/atenpas/gpd gpd \
+    && cd gpd \
+    && mkdir build \
+    && cd build \
+    && cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local .. \
+    && make -j$(nproc) \
+    && make install
+
+# Install Deep Grasp Demo
+ENV GRASP_WS=/grasp_ws
+RUN mkdir -p ${GRASP_WS}/src
+WORKDIR ${GRASP_WS}/src
+RUN echo ""
+RUN git clone https://github.com/eborghi10/deep_grasp_demo.git
+RUN wstool init .
+RUN wstool merge deep_grasp_demo/.rosinstall
+RUN wstool update
+WORKDIR ${GRASP_WS}
+USER ${USER}
+RUN rosdep install --from-paths src --rosdistro=melodic -yi -r --os=ubuntu:bionic
+USER root
+RUN /bin/bash -c ". /opt/ros/melodic/setup.bash; \
+        catkin_make -DCMAKE_INSTALL_PREFIX=/opt/ros/melodic -DCMAKE_BUILD_TYPE=Release; \
+        cd build; make install"
+RUN rm -r ${GRASP_WS}
+
+######################################################
 
 # Webots config
 RUN mkdir -p /home/${USER}/.config/Cyberbotics
