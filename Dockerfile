@@ -204,7 +204,6 @@ RUN cd /opt \
 ENV GRASP_WS=/grasp_ws
 RUN mkdir -p ${GRASP_WS}/src
 WORKDIR ${GRASP_WS}/src
-RUN echo ""
 RUN git clone https://github.com/eborghi10/deep_grasp_demo.git
 RUN wstool init .
 RUN wstool merge deep_grasp_demo/.rosinstall
