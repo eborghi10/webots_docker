@@ -200,22 +200,42 @@ RUN cd /opt \
     && make -j$(nproc) \
     && make install
 
-# Install Deep Grasp Demo
-ENV GRASP_WS=/grasp_ws
-RUN mkdir -p ${GRASP_WS}/src
-WORKDIR ${GRASP_WS}/src
-RUN git clone https://github.com/eborghi10/deep_grasp_demo.git
+# # Install Deep Grasp Demo
+# ENV GRASP_WS=/grasp_ws
+# RUN mkdir -p ${GRASP_WS}/src
+# RUN echo ""
+# WORKDIR ${GRASP_WS}/src
+# RUN git clone https://github.com/eborghi10/deep_grasp_demo.git
+# RUN wstool init .
+# RUN wstool merge deep_grasp_demo/.rosinstall
+# RUN wstool update
+# WORKDIR ${GRASP_WS}
+# USER ${USER}
+# RUN rosdep install --from-paths src --rosdistro=melodic -yi -r --os=ubuntu:bionic
+# USER root
+# RUN /bin/bash -c ". /opt/ros/melodic/setup.bash; \
+#         catkin_make -DCMAKE_INSTALL_PREFIX=/opt/ros/melodic -DCMAKE_BUILD_TYPE=Release; \
+#         cd build; make install"
+# RUN rm -r ${GRASP_WS}
+
+RUN sudo apt-get remove -y ros-melodic-moveit && sudo apt-get autoremove -y
+
+# Install MoveIt! from source
+ENV MOVEIT_WS=/moveit_ws
+RUN mkdir -p ${MOVEIT_WS}/src
+WORKDIR ${MOVEIT_WS}/src
+RUN git clone https://github.com/ros-planning/moveit.git -b master
 RUN wstool init .
-RUN wstool merge deep_grasp_demo/.rosinstall
+RUN wstool merge moveit/moveit.rosinstall
 RUN wstool update
-WORKDIR ${GRASP_WS}
+WORKDIR ${MOVEIT_WS}
 USER ${USER}
 RUN rosdep install --from-paths src --rosdistro=melodic -yi -r --os=ubuntu:bionic
 USER root
 RUN /bin/bash -c ". /opt/ros/melodic/setup.bash; \
         catkin_make -DCMAKE_INSTALL_PREFIX=/opt/ros/melodic -DCMAKE_BUILD_TYPE=Release; \
         cd build; make install"
-RUN rm -r ${GRASP_WS}
+RUN rm -r ${MOVEIT_WS}
 
 ######################################################
 
